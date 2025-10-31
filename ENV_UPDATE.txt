@@ -1,0 +1,16 @@
+# ADD THESE LINES TO YOUR .env.local FILE
+# Location: c:\Users\Yugendra\Downloads\smartpillapp\.env.local
+
+# Keep your existing GROQ_API_KEY line, then add these:
+
+FIREBASE_PROJECT_ID=smartpilladvisor
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@smartpilladvisor.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n"
+
+# IMPORTANT: Keep the quotes around the private key and keep all the \n characters!
+
+# Your complete .env.local should look like:
+# GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
+# FIREBASE_PROJECT_ID=smartpilladvisor
+# FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@smartpilladvisor.iam.gserviceaccount.com
+# FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"

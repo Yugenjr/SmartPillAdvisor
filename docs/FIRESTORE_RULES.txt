@@ -1,0 +1,54 @@
+# Firebase Firestore Security Rules for smartpilladvisor project
+# Copy these rules to your Firebase Console to enable chat history storage
+
+STEPS:
+1. Go to: https://console.firebase.google.com/project/smartpilladvisor/firestore
+2. Click "Firestore Database" in the left menu
+3. Click the "Rules" tab at the top
+4. Replace ALL existing rules with the configuration below
+5. Click "Publish"
+
+Paste this configuration:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read/write access to chatSessions for all users
+    // In production, you should add authentication and user-specific rules
+    match /chatSessions/{sessionId} {
+      allow read, write: if true;
+    }
+    
+    // Allow read/write access to medicines collection
+    match /medicines/{medicineId} {
+      allow read, write: if true;
+    }
+    
+    // Allow read access to interactions collection
+    match /interactions/{interactionId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
+
+IMPORTANT: These rules allow public access for development.
+For production, implement proper authentication:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /chatSessions/{sessionId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /medicines/{medicineId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /interactions/{interactionId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}

@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f8fafc;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.container {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 72rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Chat message formatting */
+.formatted-content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.formatted-content p {
+  margin-bottom: 0.5rem;
+}
+
+.formatted-content p:last-child {
+  margin-bottom: 0;
+}
+
+.formatted-content ul,
+.formatted-content ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.formatted-content li {
+  margin-bottom: 0.25rem;
+}
+
+.formatted-content pre {
+  margin: 0.5rem 0;
+  font-family: 'Courier New', monospace;
+}
+
+.formatted-content code {
+  font-family: 'Courier New', monospace;
+}
+
+.formatted-content h1,
+.formatted-content h2,
+.formatted-content h3 {
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.formatted-content strong {
+  font-weight: 600;
+}
+
+.formatted-content a {
+  color: #7c3aed;
+  text-decoration: underline;
+}
+
+/* Table formatting */
+.formatted-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+  font-size: 0.875rem;
+}
+
+.formatted-content th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+}
+
+.formatted-content td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+}
+
+.formatted-content tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.formatted-content tr:hover {
+  background-color: #f3f4f6;
+}
+
+.formatted-content .overflow-x-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

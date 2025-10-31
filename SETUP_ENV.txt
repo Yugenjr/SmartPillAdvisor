@@ -1,0 +1,20 @@
+# Copy this entire content to .env.local (create the file manually)
+# Location: C:\Users\Yugendra\Downloads\smartpillapp\.env.local
+
+# Groq API (provided by you)
+GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
+
+# Firebase Admin (smartpilladvisor project)
+FIREBASE_PROJECT_ID=smartpilladvisor
+
+# Firebase Service Account (you need to provide these from Firebase Console)
+# Go to: Firebase Console → Project Settings → Service Accounts → Generate New Private Key
+# Then paste the values here:
+FIREBASE_CLIENT_EMAIL=YOUR_SERVICE_ACCOUNT_EMAIL_HERE
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_LINES_HERE\n-----END PRIVATE KEY-----\n"
+
+# Google Calendar Service Account (optional - for reminder sync)
+# If you want calendar integration, provide these:
+GOOGLE_SERVICE_ACCOUNT_EMAIL=YOUR_GCAL_SERVICE_ACCOUNT_EMAIL_HERE
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_LINES_HERE\n-----END PRIVATE KEY-----\n"
+GOOGLE_CALENDAR_ID=YOUR_CALENDAR_ID@group.calendar.google.com
