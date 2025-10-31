@@ -107,7 +107,7 @@ export default function InteractionsPage() {
                 <span>Checking Interactions...</span>
               </div>
             ) : (
-              `Check Interactions ${drugs.length >= 2 ? `(${drugs.length} drugs)` : ''}`
+              <>Check Interactions {drugs.length >= 2 ? `(${drugs.length} drugs)` : ""}</>
             )}
           </button>
 
