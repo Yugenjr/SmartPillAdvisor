@@ -1,0 +1,1 @@
+Fix JSX structure error in dashboard interactions page - correct indentation and remove extra closing div
