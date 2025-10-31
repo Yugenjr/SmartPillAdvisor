@@ -116,8 +116,8 @@ export default function InteractionsPage() {
           )}
         </div>
 
-        {/* Results Card */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      {/* Results Card */}
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600">
             <h2 className="text-xl font-semibold text-white">
               Interaction Results {results.length > 0 && `(${results.length})`}
@@ -160,8 +160,8 @@ export default function InteractionsPage() {
           </div>
         </div>
 
-        {/* Info Card */}
-        <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-2xl p-6 border-2 border-purple-200">
+      {/* Info Card */}
+      <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-2xl p-6 border-2 border-purple-200">
           <h3 className="font-semibold text-purple-900 mb-2">ℹ️ About Severity Levels</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
             <div className="flex items-center gap-2">
@@ -178,7 +178,6 @@ export default function InteractionsPage() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }
