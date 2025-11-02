@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
-import { getDb } from "@/lib/firebaseAdmin";
+import { connectToDatabase } from "@/lib/mongodb";
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,19 +26,22 @@ export async function POST(req: NextRequest) {
 
     const text = chat.choices?.[0]?.message?.content || "";
 
-    // Save chat to Firebase if userId provided
+    // Save chat to MongoDB if userId provided
     if (userId) {
-      const db = getDb();
-      if (db) {
+      try {
+        const { db } = await connectToDatabase();
         const chatData = {
           userId,
           sessionId: sessionId || `session_${Date.now()}`,
           userMessage: message,
           aiResponse: text,
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
         };
 
-        await db.collection("chatSessions").add(chatData);
+        await db.collection("chatSessions").insertOne(chatData);
+      } catch (dbError) {
+        console.error("MongoDB save error:", dbError);
+        // Continue without saving to database, don't fail the request
       }
     }
 

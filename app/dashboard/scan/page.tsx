@@ -248,7 +248,6 @@ export default function ScanPage() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

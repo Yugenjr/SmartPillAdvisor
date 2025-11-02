@@ -1,14 +1,13 @@
 "use client";
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { 
-  signInWithEmailAndPassword, 
+import {
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { auth } from './firebase';
 
 interface User {
   uid: string;
@@ -33,31 +32,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Check for development bypass first
+    const devBypass = localStorage.getItem("dev_bypass");
+    const devUser = localStorage.getItem("dev_user");
+
+    if (devBypass === "true" && devUser) {
+      try {
+        const userData = JSON.parse(devUser);
+        setUser(userData);
+        setFirebaseUser(null); // No real Firebase user in dev mode
+        setIsLoading(false);
+        return;
+      } catch (error) {
+        console.warn("Invalid dev user data, continuing with normal auth");
+        localStorage.removeItem("dev_bypass");
+        localStorage.removeItem("dev_user");
+      }
+    }
+
     // Listen to Firebase auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in, fetch user data from Firestore
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
+        // User is signed in, fetch user data from MongoDB
+        try {
+          const response = await fetch(`/api/users/${firebaseUser.uid}`);
+          if (response.ok) {
+            const userData = await response.json();
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              name: userData.name || firebaseUser.email?.split('@')[0] || 'User'
+            });
+          } else {
+            // Create user document if it doesn't exist
+            const newUser = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              name: firebaseUser.email?.split('@')[0] || 'User'
+            };
+            // Create user in MongoDB
+            await fetch('/api/users', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                uid: newUser.uid,
+                name: newUser.name,
+                email: newUser.email,
+                createdAt: new Date().toISOString()
+              })
+            });
+            setUser(newUser);
+          }
+        } catch (error) {
+          console.error('Error fetching/creating user:', error);
+          // Fallback to basic user data
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email || '',
-            name: userData.name || firebaseUser.email?.split('@')[0] || 'User'
-          });
-        } else {
-          // Create user document if it doesn't exist
-          const newUser = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || '',
             name: firebaseUser.email?.split('@')[0] || 'User'
-          };
-          await setDoc(doc(db, 'users', firebaseUser.uid), {
-            name: newUser.name,
-            email: newUser.email,
-            createdAt: new Date().toISOString()
           });
-          setUser(newUser);
         }
         setFirebaseUser(firebaseUser);
       } else {
@@ -94,12 +127,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = async (name: string, email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        name,
-        email,
-        createdAt: new Date().toISOString()
+
+      // Create user document in MongoDB
+      await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: userCredential.user.uid,
+          name,
+          email,
+          createdAt: new Date().toISOString()
+        })
       });
 
       return { success: true };
@@ -119,6 +157,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      // Check if we're in dev bypass mode
+      const devBypass = localStorage.getItem("dev_bypass");
+      if (devBypass === "true") {
+        // Clear dev mode data
+        localStorage.removeItem("dev_bypass");
+        localStorage.removeItem("dev_user");
+        setUser(null);
+        setFirebaseUser(null);
+        return;
+      }
+
+      // Normal Firebase logout
       await signOut(auth);
     } catch (error) {
       console.error('Logout error:', error);

@@ -1,11 +1,9 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, where } from "firebase/firestore";
-import { app as firebaseApp } from "@/lib/firebase";
 
 type Message = { role: "user" | "assistant"; content: string; timestamp: number };
-type ChatSession = { id: string; title: string; messages: Message[]; createdAt: number; userId?: string };
+type ChatSession = { id: string; title: string; messages: Message[]; createdAt: number; userId: string; sessionId: string };
 
 export default function ChatPage() {
   const { user } = useAuth();
@@ -17,24 +15,19 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const db = getFirestore(firebaseApp);
 
-  // Load chat sessions from Firebase
+  // Load chat sessions from MongoDB
   useEffect(() => {
-    try {
-      const q = query(collection(db, "chatSessions"), orderBy("createdAt", "desc"));
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const loadedSessions: ChatSession[] = [];
-          snapshot.forEach((doc) => {
-            loadedSessions.push({ id: doc.id, ...doc.data() } as ChatSession);
-          });
-          setSessions(loadedSessions);
-        },
-        (error) => {
-          console.warn("Firestore permission error - using local storage fallback:", error.message);
-          // Load from localStorage as fallback
+    if (!user?.uid) return;
+
+    const loadSessions = async () => {
+      try {
+        const res = await fetch(`/api/chat/sessions?userId=${user.uid}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSessions(data.sessions || []);
+        } else {
+          // Fallback to localStorage
           const stored = localStorage.getItem("chatSessions");
           if (stored) {
             try {
@@ -42,18 +35,19 @@ export default function ChatPage() {
             } catch {}
           }
         }
-      );
-      return () => unsubscribe();
-    } catch (error) {
-      console.warn("Firestore not configured - using local storage");
-      const stored = localStorage.getItem("chatSessions");
-      if (stored) {
-        try {
-          setSessions(JSON.parse(stored));
-        } catch {}
+      } catch (error) {
+        console.warn("MongoDB load error - using local storage fallback:", error);
+        const stored = localStorage.getItem("chatSessions");
+        if (stored) {
+          try {
+            setSessions(JSON.parse(stored));
+          } catch {}
+        }
       }
-    }
-  }, [db]);
+    };
+
+    loadSessions();
+  }, [user?.uid]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -61,18 +55,40 @@ export default function ChatPage() {
   }, [messages]);
 
   const createNewSession = async () => {
+    if (!user?.uid) return;
+
+    const sessionId = `session_${Date.now()}`;
     const newSession = {
+      sessionId,
       title: "New Chat",
       messages: [],
       createdAt: Date.now(),
+      userId: user.uid,
     };
+
     try {
-      const docRef = await addDoc(collection(db, "chatSessions"), newSession);
-      setCurrentSessionId(docRef.id);
-      setMessages([]);
+      // Create session in MongoDB via API
+      const res = await fetch("/api/chat/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newSession),
+      });
+
+      if (res.ok) {
+        setCurrentSessionId(sessionId);
+        setMessages([]);
+        // Reload sessions
+        const sessionsRes = await fetch(`/api/chat/sessions?userId=${user.uid}`);
+        if (sessionsRes.ok) {
+          const data = await sessionsRes.json();
+          setSessions(data.sessions || []);
+        }
+      } else {
+        throw new Error("Failed to create session");
+      }
     } catch (error) {
       // Fallback to localStorage
-      const id = `session_${Date.now()}`;
+      const id = sessionId;
       const sessionWithId = { id, ...newSession };
       const stored = localStorage.getItem("chatSessions");
       const existing = stored ? JSON.parse(stored) : [];
@@ -85,7 +101,7 @@ export default function ChatPage() {
   };
 
   const loadSession = (session: ChatSession) => {
-    setCurrentSessionId(session.id);
+    setCurrentSessionId(session.sessionId);
     setMessages(session.messages || []);
   };
 
@@ -108,7 +124,11 @@ export default function ChatPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({
+          message: text,
+          userId: user?.uid,
+          sessionId: currentSessionId
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Chat error");
@@ -117,19 +137,24 @@ export default function ChatPage() {
       const finalMessages = [...updatedMessages, assistantMsg];
       setMessages(finalMessages);
 
-      // Save to Firebase or localStorage
-      if (currentSessionId) {
+      // Update session in MongoDB
+      if (currentSessionId && user?.uid) {
         try {
-          const sessionRef = doc(db, "chatSessions", currentSessionId);
-          await updateDoc(sessionRef, {
-            messages: finalMessages,
-            title: text.slice(0, 50),
+          await fetch("/api/chat/session", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: currentSessionId,
+              userId: user.uid,
+              messages: finalMessages,
+              title: text.slice(0, 50),
+            }),
           });
         } catch (error) {
           // Fallback to localStorage
           const stored = localStorage.getItem("chatSessions");
           const existing = stored ? JSON.parse(stored) : [];
-          const index = existing.findIndex((s: ChatSession) => s.id === currentSessionId);
+          const index = existing.findIndex((s: ChatSession) => s.sessionId === currentSessionId);
           if (index >= 0) {
             existing[index].messages = finalMessages;
             existing[index].title = text.slice(0, 50);
@@ -209,68 +234,94 @@ export default function ChatPage() {
       formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold">$1</strong>');
       formatted = formatted.replace(/\n/g, '<br/>');
     }
-
     return formatted;
   };
 
   return (
-    <div className="flex h-screen gap-0 fixed inset-0 top-0 left-0 right-0 bottom-0">
-      {/* Sidebar */}
+    <div className="flex h-[calc(100vh-73px)] bg-gradient-to-br from-gray-50 to-blue-50">
+      {/* Chat Sessions Sidebar */}
       <div
-        className={`${
-          sidebarOpen ? "w-72" : "w-0"
-        } transition-all duration-300 bg-gradient-to-b from-gray-900 to-gray-800 text-white overflow-hidden flex flex-col`}
+        className={`bg-white shadow-lg transition-all duration-300 border-r border-gray-200 ${
+          sidebarOpen ? "w-72" : "w-0 overflow-hidden"
+        }`}
       >
-        <div className="p-4 border-b border-gray-700">
-          <button
-            onClick={createNewSession}
-            className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg"
-          >
-            + New Chat
-          </button>
-          <div className="mt-3">
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg">Chat Sessions</h3>
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1 hover:bg-white/20 rounded transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* New Chat Button */}
+          <div className="p-4 border-b border-gray-200">
+            <button
+              onClick={createNewSession}
+              className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-md flex items-center justify-center gap-2"
+            >
+              <span>+</span>
+              <span>New Chat</span>
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="p-4 border-b border-gray-200">
             <input
               type="text"
-              placeholder="Search history..."
+              placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {filteredSessions.map((session) => (
-            <button
-              key={session.id}
-              onClick={() => loadSession(session)}
-              className={`w-full text-left px-3 py-2.5 rounded-lg transition-all ${
-                currentSessionId === session.id
-                  ? "bg-purple-600 shadow-lg"
-                  : "bg-gray-700 hover:bg-gray-600"
-              }`}
-            >
-              <div className="font-medium text-sm truncate">{session.title || "New Chat"}</div>
-              <div className="text-xs text-gray-300 mt-1">
-                {new Date(session.createdAt).toLocaleDateString()}
-              </div>
-            </button>
-          ))}
+
+          {/* Sessions List */}
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {filteredSessions.map((session) => (
+              <button
+                key={session.sessionId}
+                onClick={() => loadSession(session)}
+                className={`w-full text-left px-3 py-3 rounded-lg transition-all hover:bg-gray-50 ${
+                  currentSessionId === session.sessionId
+                    ? "bg-purple-100 border-2 border-purple-300 shadow-sm"
+                    : "border border-transparent"
+                }`}
+              >
+                <div className="font-medium text-sm text-gray-900 truncate">
+                  {session.title || "New Chat"}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {new Date(session.createdAt).toLocaleDateString()}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 to-blue-50">
-        {/* Header */}
+      <div className="flex-1 flex flex-col">
+        {/* Chat Header */}
         <div className="bg-white border-b shadow-sm px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            {!sidebarOpen && (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            )}
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                 Medical Assistant

@@ -150,6 +150,82 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {/* Mock Login Button for Testing */}
+          {isLogin && (
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={async () => {
+                  setLoading(true);
+                  setError("");
+                  try {
+                    // First try to signup with test account (this will work if auth is enabled)
+                    const signupResult = await signup("Test User", "test@example.com", "test123");
+                    if (signupResult.success) {
+                      // Account created successfully, now login
+                      const result = await login("test@example.com", "test123");
+                      if (result.success) {
+                        router.push("/dashboard");
+                      } else {
+                        setError(result.error || "Login failed after account creation");
+                      }
+                    } else {
+                      // Signup failed, try login (account might already exist)
+                      const result = await login("test@example.com", "test123");
+                      if (result.success) {
+                        router.push("/dashboard");
+                      } else {
+                        // Check if it's a configuration issue
+                        if (result.error?.includes('invalid-credential') || result.error?.includes('configuration')) {
+                          setError("Firebase Authentication not properly configured. Please enable Email/Password sign-in in Firebase Console → Authentication → Sign-in method");
+                        } else {
+                          setError(result.error || "Mock login failed");
+                        }
+                      }
+                    }
+                  } catch (err) {
+                    setError("An error occurred during mock login. Check Firebase configuration.");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                🚀 Quick Test Login (Demo Account)
+              </button>
+
+              {/* Development Mode Bypass */}
+              <button
+                onClick={async () => {
+                  setLoading(true);
+                  setError("");
+                  try {
+                    // Bypass authentication for development/testing
+                    localStorage.setItem("dev_bypass", "true");
+                    localStorage.setItem("dev_user", JSON.stringify({
+                      uid: "dev-user-123",
+                      email: "dev@example.com",
+                      name: "Dev User"
+                    }));
+                    router.push("/dashboard");
+                  } catch (err) {
+                    setError("Development bypass failed");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+                className="w-full py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold rounded-xl hover:from-orange-700 hover:to-red-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+              >
+                🔧 Dev Mode (No Auth Required)
+              </button>
+
+              <p className="text-xs text-gray-500 text-center mt-2">
+                Use Dev Mode if Firebase auth is not configured
+              </p>
+            </div>
+          )}
+
           {isLogin && (
             <div className="mt-4 text-center">
               <a href="#" className="text-sm text-purple-600 hover:text-purple-700 font-medium">

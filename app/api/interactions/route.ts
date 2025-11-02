@@ -5,18 +5,37 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const drugList: { name: string }[] = body.drugList || [];
-    
-    console.log('Checking interactions for:', drugList.map(d => d.name));
-    
+
+    console.log('=== INTERACTIONS API DEBUG ===');
+    console.log('Request body:', JSON.stringify(body, null, 2));
+    console.log('Drug list:', drugList);
+
     if (!drugList || drugList.length < 2) {
+      console.log('ERROR: Not enough drugs provided');
       return NextResponse.json({ error: "At least 2 drugs required" }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
-    
+
     if (!db) {
-      console.error('Database connection failed');
+      console.log('ERROR: Database connection failed');
       return NextResponse.json({ error: "Database connection failed" }, { status: 500 });
+    }
+
+    // Check total interactions in DB
+    const totalCount = await db.collection("interactions").countDocuments();
+    console.log('Total interactions in database:', totalCount);
+
+    if (totalCount === 0) {
+      console.log('WARNING: No interactions in database!');
+      return NextResponse.json({
+        interactions: [],
+        success: true,
+        debug: {
+          totalInDB: 0,
+          message: "No interaction data in database. Please upload data using MongoDB Compass."
+        }
+      });
     }
 
     const interactions: any[] = [];
@@ -27,17 +46,26 @@ export async function POST(req: NextRequest) {
         const drug1 = drugList[i].name.trim();
         const drug2 = drugList[j].name.trim();
 
-        console.log(`Searching: ${drug1} + ${drug2}`);
+        console.log(`Searching for: "${drug1}" + "${drug2}"`);
 
         // Query MongoDB for interactions (check both directions)
-        const results = await db.collection("interactions").find({
+        const query = {
           $or: [
             { Drug_A: { $regex: drug1, $options: 'i' }, Drug_B: { $regex: drug2, $options: 'i' } },
             { Drug_A: { $regex: drug2, $options: 'i' }, Drug_B: { $regex: drug1, $options: 'i' } }
           ]
-        }).limit(50).toArray();
+        };
 
-        console.log(`Found ${results.length} interactions`);
+        console.log('Query:', JSON.stringify(query, null, 2));
+
+        const results = await db.collection("interactions").find(query).limit(50).toArray();
+
+        console.log(`Found ${results.length} interactions for this pair`);
+
+        if (results.length > 0) {
+          console.log('Sample result:', JSON.stringify(results[0], null, 2));
+        }
+
         interactions.push(...results);
       }
     }
@@ -47,7 +75,17 @@ export async function POST(req: NextRequest) {
     interactions.sort((a, b) => (levelToInt[a.Level] ?? 9) - (levelToInt[b.Level] ?? 9));
 
     console.log(`Total interactions found: ${interactions.length}`);
-    return NextResponse.json({ interactions, success: true }, { status: 200 });
+    console.log('=== END DEBUG ===');
+
+    return NextResponse.json({
+      interactions,
+      success: true,
+      debug: {
+        totalInDB: totalCount,
+        drugsSearched: drugList.map(d => d.name),
+        found: interactions.length
+      }
+    }, { status: 200 });
   } catch (e: any) {
     console.error('Interactions API error:', e);
     return NextResponse.json({ error: e.message, success: false }, { status: 500 });

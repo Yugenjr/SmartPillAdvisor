@@ -7,6 +7,8 @@ type Interaction = {
   Drug_B: string;
   Description?: string;
   Level?: string;
+  DDInterID_A?: string;
+  DDInterID_B?: string;
 };
 
 export default function InteractionsPage() {
@@ -14,6 +16,7 @@ export default function InteractionsPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Interaction[]>([]);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   const addDrug = () => {
     const v = input.trim();
@@ -29,6 +32,7 @@ export default function InteractionsPage() {
   const check = async () => {
     setLoading(true);
     setResults([]);
+    setDebugInfo(null);
     try {
       const res = await fetch("/api/interactions", {
         method: "POST",
@@ -37,9 +41,15 @@ export default function InteractionsPage() {
       });
       const data = await res.json();
       setResults(data.interactions || []);
+      setDebugInfo(data.debug);
+      console.log("API Response:", data);
     } finally {
       setLoading(false);
     }
+  };
+
+  const seedDatabase = async () => {
+    alert("Database seeding not needed - you already have 222k interactions uploaded!");
   };
 
   const getSeverityColor = (level: string) => {
@@ -66,7 +76,7 @@ export default function InteractionsPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addDrug()}
-              placeholder="Enter medicine name (e.g., Aspirin, Warfarin)"
+              placeholder="Enter medicine name (e.g., Abacavir, Aspirin, Warfarin)"
               className="flex-1 rounded-lg border-2 border-gray-200 px-4 py-3 focus:border-purple-500 focus:outline-none transition-colors"
             />
             <button 
@@ -96,23 +106,55 @@ export default function InteractionsPage() {
             </div>
           )}
 
-          <button 
-            onClick={check} 
-            disabled={drugs.length < 2 || loading} 
-            className="w-full px-6 py-4 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-emerald-700 hover:to-teal-700 transition-all shadow-md hover:shadow-lg"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Checking Interactions...</span>
-              </div>
-            ) : (
-              <>Check Interactions {drugs.length >= 2 ? `(${drugs.length} drugs)` : ""}</>
-            )}
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={check} 
+              disabled={drugs.length < 2 || loading} 
+              className="flex-1 px-6 py-4 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-emerald-700 hover:to-teal-700 transition-all shadow-md hover:shadow-lg"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Checking Interactions...</span>
+                </div>
+              ) : (
+                <>Check Interactions {drugs.length >= 2 ? `(${drugs.length} drugs)` : ""}</>
+              )}
+            </button>
+
+            <button 
+              onClick={seedDatabase}
+              disabled={loading}
+              className="px-6 py-4 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg"
+              title="Your database already has 222k interactions uploaded"
+            >
+              ✅ DB Ready
+            </button>
+          </div>
 
           {drugs.length < 2 && drugs.length > 0 && (
             <p className="text-sm text-gray-500 text-center">Add at least 2 medicines to check interactions</p>
+          )}
+
+          {/* Quick Test Drugs */}
+          {drugs.length === 0 && (
+            <div className="border-t border-gray-200 pt-4">
+              <p className="text-sm text-gray-600 mb-3 text-center">Quick test with common drugs:</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {["Abacavir", "Aspirin", "Warfarin", "Ibuprofen", "Paracetamol"].map((drug) => (
+                  <button
+                    key={drug}
+                    onClick={() => {
+                      setDrugs([drug]);
+                      setInput("");
+                    }}
+                    className="px-3 py-1 bg-purple-50 border border-purple-200 rounded-full text-sm text-purple-700 hover:bg-purple-100 transition-colors"
+                  >
+                    {drug}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
@@ -130,6 +172,15 @@ export default function InteractionsPage() {
                 <div className="text-6xl mb-4">💊</div>
                 <p className="text-gray-500 text-lg">No interactions found yet</p>
                 <p className="text-gray-400 text-sm mt-2">Add medicines above and click "Check Interactions"</p>
+                {debugInfo && (
+                  <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left">
+                    <p className="text-sm font-semibold text-gray-700">Debug Info:</p>
+                    <p className="text-xs text-gray-600">Total in DB: {debugInfo.totalInDB}</p>
+                    <p className="text-xs text-gray-600">Drugs searched: {debugInfo.drugsSearched?.join(', ')}</p>
+                    <p className="text-xs text-gray-600">Found: {debugInfo.found}</p>
+                    {debugInfo.message && <p className="text-xs text-red-600 mt-2">{debugInfo.message}</p>}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -145,8 +196,14 @@ export default function InteractionsPage() {
                           <span className="text-gray-400">⚡</span>
                           <span className="font-semibold text-blue-700">{r.Drug_B}</span>
                         </div>
-                        {r.Description && (
-                          <p className="text-gray-600 text-sm">{r.Description}</p>
+                        {(r.Description || r.DDInterID_A) && (
+                          <div className="text-gray-600 text-sm space-y-1">
+                            {r.Description && <p>{r.Description}</p>}
+                            <div className="flex gap-4 text-xs">
+                              {r.DDInterID_A && <span className="bg-purple-50 px-2 py-1 rounded">ID: {r.DDInterID_A}</span>}
+                              {r.DDInterID_B && <span className="bg-blue-50 px-2 py-1 rounded">ID: {r.DDInterID_B}</span>}
+                            </div>
+                          </div>
                         )}
                       </div>
                       <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 whitespace-nowrap ${getSeverityColor(r.Level || 'Unknown')}`}>
@@ -155,6 +212,15 @@ export default function InteractionsPage() {
                     </div>
                   </div>
                 ))}
+
+                {debugInfo && (
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm font-semibold text-blue-700">Debug Info:</p>
+                    <p className="text-xs text-blue-600">Total in DB: {debugInfo.totalInDB}</p>
+                    <p className="text-xs text-blue-600">Drugs searched: {debugInfo.drugsSearched?.join(', ')}</p>
+                    <p className="text-xs text-blue-600">Found: {debugInfo.found}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -180,4 +246,4 @@ export default function InteractionsPage() {
         </div>
     </div>
   );
-}
+} 

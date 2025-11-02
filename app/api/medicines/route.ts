@@ -1,6 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/firebaseAdmin";
+import { connectToDatabase } from "@/lib/mongodb";
 import { getCalendarClient } from "@/lib/google";
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    }
+
+    const { db } = await connectToDatabase();
+    const medicines = await db.collection("medicines")
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return NextResponse.json({ medicines });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,7 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    const db = getDb();
+    const { db } = await connectToDatabase();
 
     const doc = {
       name,
@@ -39,16 +60,8 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
     };
 
-    let storedId: string | null = null;
-    if (db) {
-      const ref = await db.collection("medicines").add({
-        ...doc,
-        purchaseDate: doc.purchaseDate ? (doc.purchaseDate as Date).toISOString() : null,
-        expiryDate: (doc.expiryDate as Date).toISOString(),
-        createdAt: (doc.createdAt as Date).toISOString(),
-      });
-      storedId = ref.id;
-    }
+    const result = await db.collection("medicines").insertOne(doc);
+    const storedId = result.insertedId.toString();
 
     let calendarEvent: any = null;
     if (addCalendar) {
