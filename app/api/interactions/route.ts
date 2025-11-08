@@ -43,16 +43,27 @@ export async function POST(req: NextRequest) {
     // Check all pairs of drugs
     for (let i = 0; i < drugList.length; i++) {
       for (let j = i + 1; j < drugList.length; j++) {
-        const drug1 = drugList[i].name.trim();
-        const drug2 = drugList[j].name.trim();
+        // Clean and normalize drug names
+        const drug1 = drugList[i].name.trim().toLowerCase();
+        const drug2 = drugList[j].name.trim().toLowerCase();
 
         console.log(`Searching for: "${drug1}" + "${drug2}"`);
 
-        // Query MongoDB for interactions (check both directions)
+        // Improved query with better regex and exact matches
         const query = {
           $or: [
-            { Drug_A: { $regex: drug1, $options: 'i' }, Drug_B: { $regex: drug2, $options: 'i' } },
-            { Drug_A: { $regex: drug2, $options: 'i' }, Drug_B: { $regex: drug1, $options: 'i' } }
+            {
+              $and: [
+                { Drug_A: { $regex: `^${drug1}$`, $options: 'i' } },
+                { Drug_B: { $regex: `^${drug2}$`, $options: 'i' } }
+              ]
+            },
+            {
+              $and: [
+                { Drug_A: { $regex: `^${drug2}$`, $options: 'i' } },
+                { Drug_B: { $regex: `^${drug1}$`, $options: 'i' } }
+              ]
+            }
           ]
         };
 
@@ -74,16 +85,26 @@ export async function POST(req: NextRequest) {
     const levelToInt: Record<string, number> = { Major: 0, Moderate: 1, Minor: 2, Unknown: 3 };
     interactions.sort((a, b) => (levelToInt[a.Level] ?? 9) - (levelToInt[b.Level] ?? 9));
 
-    console.log(`Total interactions found: ${interactions.length}`);
+    // Remove duplicates based on drug pair and description
+    const seen = new Set<string>();
+    const uniqueInteractions = interactions.filter(interaction => {
+      const key = `${interaction.Drug_A}-${interaction.Drug_B}-${interaction.Level}-${interaction.Description || ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    console.log(`Total interactions found: ${interactions.length}, unique: ${uniqueInteractions.length}`);
     console.log('=== END DEBUG ===');
 
     return NextResponse.json({
-      interactions,
+      interactions: uniqueInteractions,
       success: true,
       debug: {
         totalInDB: totalCount,
         drugsSearched: drugList.map(d => d.name),
-        found: interactions.length
+        found: interactions.length,
+        unique: uniqueInteractions.length
       }
     }, { status: 200 });
   } catch (e: any) {

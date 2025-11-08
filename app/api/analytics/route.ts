@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/firebaseAdmin";
+import { connectToDatabase } from "@/lib/mongodb";
 
 // Simple DS concept: bucket medicines by days-to-expiry for a risk overview
 export async function GET() {
   try {
-    const db = getDb();
+    const { db } = await connectToDatabase();
     const today = new Date();
 
     const buckets = { ">30d": 0, "7-30d": 0, "<7d": 0 } as Record<string, number>;
 
     if (db) {
-      const snapshot = await db.collection("medicines").get();
-      snapshot.forEach((doc) => {
-        const data = doc.data() as any;
+      const medicines = await db.collection("medicines").find({}).toArray();
+      medicines.forEach((doc: any) => {
+        const data = doc as { expiryDate: string };
         const exp = new Date(data.expiryDate);
         const diff = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         if (diff > 30) buckets[">30d"]++;

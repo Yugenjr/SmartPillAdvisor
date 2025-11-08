@@ -178,6 +178,7 @@ export default function InteractionsPage() {
                     <p className="text-xs text-gray-600">Total in DB: {debugInfo.totalInDB}</p>
                     <p className="text-xs text-gray-600">Drugs searched: {debugInfo.drugsSearched?.join(', ')}</p>
                     <p className="text-xs text-gray-600">Found: {debugInfo.found}</p>
+                    {debugInfo.unique && <p className="text-xs text-gray-600">Unique: {debugInfo.unique}</p>}
                     {debugInfo.message && <p className="text-xs text-red-600 mt-2">{debugInfo.message}</p>}
                   </div>
                 )}
@@ -219,6 +220,7 @@ export default function InteractionsPage() {
                     <p className="text-xs text-blue-600">Total in DB: {debugInfo.totalInDB}</p>
                     <p className="text-xs text-blue-600">Drugs searched: {debugInfo.drugsSearched?.join(', ')}</p>
                     <p className="text-xs text-blue-600">Found: {debugInfo.found}</p>
+                    {debugInfo.unique && <p className="text-xs text-blue-600">Unique: {debugInfo.unique}</p>}
                   </div>
                 )}
               </div>
