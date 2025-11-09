@@ -32,24 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for development bypass first
-    const devBypass = localStorage.getItem("dev_bypass");
-    const devUser = localStorage.getItem("dev_user");
-
-    if (devBypass === "true" && devUser) {
-      try {
-        const userData = JSON.parse(devUser);
-        setUser(userData);
-        setFirebaseUser(null); // No real Firebase user in dev mode
-        setIsLoading(false);
-        return;
-      } catch (error) {
-        console.warn("Invalid dev user data, continuing with normal auth");
-        localStorage.removeItem("dev_bypass");
-        localStorage.removeItem("dev_user");
-      }
-    }
-
     // Listen to Firebase auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -157,17 +139,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      // Check if we're in dev bypass mode
-      const devBypass = localStorage.getItem("dev_bypass");
-      if (devBypass === "true") {
-        // Clear dev mode data
-        localStorage.removeItem("dev_bypass");
-        localStorage.removeItem("dev_user");
-        setUser(null);
-        setFirebaseUser(null);
-        return;
-      }
-
       // Normal Firebase logout
       await signOut(auth);
     } catch (error) {

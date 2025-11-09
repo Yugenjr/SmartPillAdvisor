@@ -194,34 +194,8 @@ export default function LoginPage() {
                 🚀 Quick Test Login (Demo Account)
               </button>
 
-              {/* Development Mode Bypass */}
-              <button
-                onClick={async () => {
-                  setLoading(true);
-                  setError("");
-                  try {
-                    // Bypass authentication for development/testing
-                    localStorage.setItem("dev_bypass", "true");
-                    localStorage.setItem("dev_user", JSON.stringify({
-                      uid: "dev-user-123",
-                      email: "dev@example.com",
-                      name: "Dev User"
-                    }));
-                    router.push("/dashboard");
-                  } catch (err) {
-                    setError("Development bypass failed");
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                disabled={loading}
-                className="w-full py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold rounded-xl hover:from-orange-700 hover:to-red-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-              >
-                🔧 Dev Mode (No Auth Required)
-              </button>
-
               <p className="text-xs text-gray-500 text-center mt-2">
-                Use Dev Mode if Firebase auth is not configured
+                Creates a demo account for testing the app
               </p>
             </div>
           )}

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/AuthContext";
 
-type Message = { role: "user" | "assistant"; content: string; timestamp: number };
+type Message = { role: "user" | "assistant"; content: string; timestamp: number; id?: string };
 type ChatSession = { id: string; title: string; messages: Message[]; createdAt: number; userId: string; sessionId: string };
 
 export default function ChatPage() {
@@ -15,6 +15,13 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // New features state
+  const [renamingSession, setRenamingSession] = useState<string | null>(null);
+  const [renameInput, setRenameInput] = useState("");
+  const [isTTSEnabled, setIsTTSEnabled] = useState(false);
+  const [speakingMessage, setSpeakingMessage] = useState<string | null>(null);
+  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
 
   // Load chat sessions from MongoDB
   useEffect(() => {
@@ -54,13 +61,20 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const createNewSession = async () => {
+  const createNewSession = async (fromExistingSession = false) => {
     if (!user?.uid) return;
 
     const sessionId = `session_${Date.now()}`;
+
+    // If creating from existing session, auto-generate title based on current messages
+    let title = "New Chat";
+    if (fromExistingSession && messages.length > 0) {
+      title = await generateSessionTitle(messages);
+    }
+
     const newSession = {
       sessionId,
-      title: "New Chat",
+      title,
       messages: [],
       createdAt: Date.now(),
       userId: user.uid,
@@ -140,6 +154,13 @@ export default function ChatPage() {
       // Update session in MongoDB
       if (currentSessionId && user?.uid) {
         try {
+          // Auto-generate title if this is the first meaningful conversation and title is still "New Chat"
+          let titleToUse = text.slice(0, 50);
+          const currentSession = sessions.find(s => s.sessionId === currentSessionId);
+          if (currentSession && (currentSession.title === "New Chat" || currentSession.title === "Medical Chat")) {
+            titleToUse = await generateSessionTitle(finalMessages);
+          }
+
           await fetch("/api/chat/session", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -147,17 +168,25 @@ export default function ChatPage() {
               sessionId: currentSessionId,
               userId: user.uid,
               messages: finalMessages,
-              title: text.slice(0, 50),
+              title: titleToUse,
             }),
           });
+
+          // Update local sessions
+          setSessions(sessions.map(s =>
+            s.sessionId === currentSessionId
+              ? { ...s, title: titleToUse, messages: finalMessages }
+              : s
+          ));
         } catch (error) {
           // Fallback to localStorage
           const stored = localStorage.getItem("chatSessions");
           const existing = stored ? JSON.parse(stored) : [];
           const index = existing.findIndex((s: ChatSession) => s.sessionId === currentSessionId);
           if (index >= 0) {
+            const titleToUse = text.slice(0, 50);
             existing[index].messages = finalMessages;
-            existing[index].title = text.slice(0, 50);
+            existing[index].title = titleToUse;
             localStorage.setItem("chatSessions", JSON.stringify(existing));
             setSessions(existing);
           }
@@ -175,8 +204,137 @@ export default function ChatPage() {
     s.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // TTS Functions
+  const speakMessage = async (messageId: string, content: string) => {
+    if (!isTTSEnabled) return;
+
+    try {
+      setSpeakingMessage(messageId);
+
+      // Stop any currently playing audio
+      if (audioRef) {
+        audioRef.pause();
+        audioRef.currentTime = 0;
+      }
+
+      const response = await fetch('/api/chat/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: content, voice: 'alloy' })
+      });
+
+      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType?.includes('audio/')) {
+          const audioBlob = await response.blob();
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          setAudioRef(audio);
+
+          audio.onended = () => {
+            setSpeakingMessage(null);
+            URL.revokeObjectURL(audioUrl);
+          };
+
+          await audio.play();
+        } else {
+          // Handle JSON error response
+          const errorData = await response.json();
+          console.error('TTS error:', errorData.message);
+          alert(`TTS: ${errorData.message}`);
+          setSpeakingMessage(null);
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('TTS failed:', errorData);
+        alert(`TTS: ${errorData.message || 'Service temporarily unavailable'}`);
+        setSpeakingMessage(null);
+      }
+    } catch (error) {
+      console.error('TTS error:', error);
+      alert('Text-to-speech is currently unavailable. This feature will be available soon!');
+      setSpeakingMessage(null);
+    }
+  };
+
+  const stopSpeaking = () => {
+    if (audioRef) {
+      audioRef.pause();
+      audioRef.currentTime = 0;
+    }
+    setSpeakingMessage(null);
+  };
+
+  // Session Renaming Functions
+  const startRenaming = (sessionId: string, currentTitle: string) => {
+    setRenamingSession(sessionId);
+    setRenameInput(currentTitle);
+  };
+
+  const saveRename = async () => {
+    if (!renamingSession || !renameInput.trim() || !user?.uid) return;
+
+    try {
+      const response = await fetch('/api/chat/session', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: renamingSession,
+          userId: user.uid,
+          title: renameInput.trim()
+        })
+      });
+
+      if (response.ok) {
+        // Update local sessions
+        setSessions(sessions.map(s =>
+          s.sessionId === renamingSession
+            ? { ...s, title: renameInput.trim() }
+            : s
+        ));
+        setRenamingSession(null);
+        setRenameInput("");
+      } else {
+        console.error('Failed to rename session');
+      }
+    } catch (error) {
+      console.error('Error renaming session:', error);
+    }
+  };
+
+  const cancelRename = () => {
+    setRenamingSession(null);
+    setRenameInput("");
+  };
+
+  // Auto-generate title for session
+  const generateSessionTitle = async (sessionMessages: Message[]) => {
+    if (sessionMessages.length === 0) return "New Chat";
+
+    try {
+      const response = await fetch('/api/chat/title', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: sessionMessages })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.title || "Medical Chat";
+      }
+    } catch (error) {
+      console.error('Error generating title:', error);
+    }
+
+    return "Medical Chat";
+  };
+
   // Format message content with rich formatting
   const formatMessage = (content: string, role: "user" | "assistant") => {
+    if (!content || typeof content !== 'string') {
+      return content || '';
+    }
+
     let formatted = content;
 
     // For assistant messages, apply rich formatting
@@ -238,84 +396,145 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-73px)] bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden">
       {/* Chat Sessions Sidebar */}
       <div
-        className={`bg-white shadow-lg transition-all duration-300 border-r border-gray-200 ${
-          sidebarOpen ? "w-72" : "w-0 overflow-hidden"
+        className={`bg-white/95 backdrop-blur-xl shadow-2xl transition-all duration-500 ease-in-out border-r border-white/20 ${
+          sidebarOpen ? "w-80" : "w-0 overflow-hidden"
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg">Chat Sessions</h3>
+          <div className="p-6 border-b border-gray-100/50 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-xl">Chat Sessions</h3>
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1 hover:bg-white/20 rounded transition-colors"
+                className="p-2 hover:bg-white/20 rounded-xl transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
+              </button>
+            </div>
+
+            {/* TTS Toggle */}
+            <div className="flex items-center justify-between bg-white/10 backdrop-blur-sm rounded-xl p-3">
+              <span className="text-sm font-medium">🔊 TTS</span>
+              <button
+                onClick={() => setIsTTSEnabled(!isTTSEnabled)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isTTSEnabled ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isTTSEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
               </button>
             </div>
           </div>
 
           {/* New Chat Button */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-100/50">
             <button
-              onClick={createNewSession}
-              className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-md flex items-center justify-center gap-2"
+              onClick={() => createNewSession()}
+              className="w-full px-6 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-2xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center justify-center gap-3"
             >
-              <span>+</span>
+              <span className="text-xl">+</span>
               <span>New Chat</span>
             </button>
           </div>
 
           {/* Search */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-100/50">
             <input
               type="text"
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-3 border-2 border-gray-200/50 rounded-2xl text-sm focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-white/50 backdrop-blur-sm"
             />
           </div>
 
           {/* Sessions List */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {filteredSessions.map((session) => (
-              <button
-                key={session.sessionId}
-                onClick={() => loadSession(session)}
-                className={`w-full text-left px-3 py-3 rounded-lg transition-all hover:bg-gray-50 ${
-                  currentSessionId === session.sessionId
-                    ? "bg-purple-100 border-2 border-purple-300 shadow-sm"
-                    : "border border-transparent"
-                }`}
-              >
-                <div className="font-medium text-sm text-gray-900 truncate">
-                  {session.title || "New Chat"}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {new Date(session.createdAt).toLocaleDateString()}
-                </div>
-              </button>
+              <div key={session.sessionId} className="group relative">
+                {renamingSession === session.sessionId ? (
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border-2 border-blue-300 shadow-lg">
+                    <input
+                      value={renameInput}
+                      onChange={(e) => setRenameInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && saveRename()}
+                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-500 mb-3"
+                      placeholder="Enter new title..."
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={saveRename}
+                        className="flex-1 px-3 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors text-sm font-medium"
+                      >
+                        ✓ Save
+                      </button>
+                      <button
+                        onClick={cancelRename}
+                        className="flex-1 px-3 py-2 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-colors text-sm font-medium"
+                      >
+                        ✕ Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => loadSession(session)}
+                    className={`w-full text-left px-5 py-4 rounded-2xl transition-all duration-300 transform hover:scale-102 ${
+                      currentSessionId === session.sessionId
+                        ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-xl scale-105"
+                        : "bg-white/60 hover:bg-white/80 shadow-lg hover:shadow-xl border border-white/20"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-base text-gray-900 truncate flex-1 min-w-0">
+                        {session.title || "New Chat"}
+                      </div>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startRenaming(session.sessionId, session.title || "New Chat");
+                          }}
+                          className="p-1 hover:bg-white/50 rounded-lg transition-colors cursor-pointer"
+                          title="Rename chat"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500 font-medium mt-1">
+                      {new Date(session.createdAt).toLocaleDateString()} • {session.messages?.length || 0} messages
+                    </div>
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         </div>
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Chat Header */}
-        <div className="bg-white border-b shadow-sm px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-lg px-8 py-6 flex items-center justify-between sticky top-0 z-10 flex-shrink-0">
+          <div className="flex items-center gap-4">
             {!sidebarOpen && (
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-3 hover:bg-gray-100/80 rounded-2xl transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -323,33 +542,56 @@ export default function ChatPage() {
               </button>
             )}
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 Medical Assistant
               </h1>
-              <p className="text-xs text-gray-500 mt-0.5">Powered by AI • For informational purposes only</p>
+              <p className="text-sm text-gray-500 mt-1 font-medium">Powered by AI • For informational purposes only</p>
             </div>
+          </div>
+
+          {/* Header Actions */}
+          <div className="flex items-center gap-3">
+            {messages.length > 0 && (
+              <button
+                onClick={() => createNewSession(true)}
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-2xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
+                title="Create new chat from current conversation"
+              >
+                ➕ New Chat
+              </button>
+            )}
+
+            {isTTSEnabled && speakingMessage && (
+              <button
+                onClick={stopSpeaking}
+                className="p-3 bg-red-500 text-white rounded-2xl hover:bg-red-600 transition-colors shadow-lg"
+                title="Stop speaking"
+              >
+                🔇
+              </button>
+            )}
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+        <div className="flex-1 overflow-y-auto px-8 py-8 space-y-6 min-h-0">
           {messages.length === 0 && (
-            <div className="text-center py-12">
-              <div className="inline-block p-4 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full mb-4">
-                <svg className="w-12 h-12 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center py-16">
+              <div className="inline-block p-6 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full mb-8 shadow-xl">
+                <svg className="w-16 h-16 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-gray-700 mb-2">How can I help you today?</h2>
-              <p className="text-sm text-gray-500 max-w-md mx-auto">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">How can I help you today?</h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8 font-medium">
                 Ask me about medicine dosages, drug interactions, side effects, symptoms, or general health guidance.
               </p>
-              <div className="mt-6 flex flex-wrap gap-2 justify-center">
+              <div className="flex flex-wrap gap-4 justify-center">
                 {["Paracetamol dosage?", "Typhoid symptoms?", "Drug interactions?"].map((q) => (
                   <button
                     key={q}
                     onClick={() => setInput(q)}
-                    className="px-4 py-2 bg-white border border-purple-200 rounded-full text-sm text-purple-600 hover:bg-purple-50 transition-colors"
+                    className="px-6 py-4 bg-white/80 backdrop-blur-xl border-2 border-white/50 rounded-2xl text-base text-blue-600 hover:bg-blue-50/80 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold"
                   >
                     {q}
                   </button>
@@ -357,42 +599,67 @@ export default function ChatPage() {
               </div>
             </div>
           )}
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[75%] rounded-2xl px-5 py-3 shadow-md ${
-                  m.role === "user"
-                    ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white"
-                    : "bg-white border border-gray-200"
-                }`}
-              >
-                <div className={`text-sm font-semibold mb-1 ${m.role === "user" ? "text-purple-100" : "text-purple-600"}`}>
-                  {m.role === "user" ? "You" : "Medical Assistant"}
-                </div>
+          {messages.map((m, i) => {
+            const messageId = `${m.role}-${m.timestamp}`;
+            return (
+              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} group`}>
                 <div
-                  className={`text-sm leading-relaxed ${
-                    m.role === "user" ? "text-white" : "text-gray-800"
-                  } formatted-content`}
-                  dangerouslySetInnerHTML={{
-                    __html: formatMessage(m.content, m.role),
-                  }}
-                />
-                <div className={`text-xs mt-2 ${m.role === "user" ? "text-purple-200" : "text-gray-400"}`}>
-                  {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  className={`max-w-[80%] rounded-3xl px-6 py-4 shadow-xl border-2 border-white/20 relative ${
+                    m.role === "user"
+                      ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-blue-500/25"
+                      : "bg-white/90 backdrop-blur-xl border-white/50"
+                  }`}
+                >
+                  <div className={`text-base font-bold mb-2 ${m.role === "user" ? "text-blue-100" : "text-blue-600"} flex items-center justify-between`}>
+                    <span>{m.role === "user" ? "You" : "Medical Assistant"}</span>
+                    {isTTSEnabled && m.role === "assistant" && (
+                      <button
+                        onClick={() => speakMessage(messageId, m.content)}
+                        disabled={speakingMessage === messageId}
+                        className={`p-2 rounded-xl transition-all duration-300 ${
+                          speakingMessage === messageId
+                            ? 'bg-red-500 text-white animate-pulse'
+                            : 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30'
+                        }`}
+                        title={speakingMessage === messageId ? "Speaking..." : "Listen to this message"}
+                      >
+                        {speakingMessage === messageId ? (
+                          <svg className="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 7v10l8-5z"/>
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <div
+                    className={`text-base leading-relaxed ${
+                      m.role === "user" ? "text-white" : "text-gray-800"
+                    } formatted-content`}
+                    dangerouslySetInnerHTML={{
+                      __html: formatMessage(m.content, m.role),
+                    }}
+                  />
+                  <div className={`text-sm mt-3 ${m.role === "user" ? "text-blue-200" : "text-gray-400"} font-medium`}>
+                    {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-white border border-gray-200 rounded-2xl px-5 py-3 shadow-md">
-                <div className="flex items-center gap-2">
+              <div className="bg-white/90 backdrop-blur-xl border-2 border-white/50 rounded-3xl px-6 py-4 shadow-xl">
+                <div className="flex items-center gap-3">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
-                  <span className="text-sm text-gray-500">Thinking...</span>
+                  <span className="text-base text-gray-500 font-semibold">Thinking...</span>
                 </div>
               </div>
             </div>
@@ -401,12 +668,12 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="bg-white border-t shadow-lg px-6 py-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex gap-3 items-end">
+        <div className="bg-white/80 backdrop-blur-xl border-t border-white/20 shadow-lg px-8 py-6 flex-shrink-0">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex gap-4 items-end">
               <div className="flex-1 relative">
                 <textarea
-                  className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-purple-500 resize-none transition-colors"
+                  className="w-full px-6 py-4 pr-16 border-2 border-gray-200/50 rounded-3xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 resize-none transition-all duration-300 bg-white/50 backdrop-blur-sm shadow-lg text-base"
                   placeholder="Ask about dosage, timing, side effects, symptoms..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -417,18 +684,18 @@ export default function ChatPage() {
                     }
                   }}
                   rows={1}
-                  style={{ minHeight: "48px", maxHeight: "120px" }}
+                  style={{ minHeight: "60px", maxHeight: "150px" }}
                 />
               </div>
               <button
                 onClick={send}
                 disabled={!input.trim() || loading}
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-2xl font-semibold hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-3xl font-bold hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105"
               >
                 Send
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-2 text-center">
+            <p className="text-sm text-gray-500 mt-4 text-center font-medium">
               ⚠️ This is for general information only. Always consult a healthcare professional for medical advice.
             </p>
           </div>

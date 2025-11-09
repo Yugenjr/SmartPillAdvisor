@@ -1,10 +1,21 @@
 from pymongo import MongoClient
 import csv
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
-# MongoDB Atlas connection string
-# Replace with your connection string after creating cluster
-MONGODB_URI = "mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority"
+# Load environment variables from .env.local
+load_dotenv(dotenv_path='../.env.local')
+
+# MongoDB Atlas connection string from environment
+MONGODB_URI = os.getenv('MONGODB_URI')
+DB_NAME = os.getenv('DB_NAME', 'smartpilladvisor')
+
+if not MONGODB_URI:
+    print("❌ MONGODB_URI not found in .env.local file")
+    print("Please make sure your .env.local file contains:")
+    print("MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/")
+    exit(1)
 
 # Path to CSV files
 csv_dir = Path(__file__).parent.parent / 'ddinterpy'
@@ -23,7 +34,7 @@ csv_files = [
 def import_to_mongodb():
     print("Connecting to MongoDB Atlas...")
     client = MongoClient(MONGODB_URI)
-    db = client['smartpilladvisor']
+    db = client[DB_NAME]
     collection = db['interactions']
     
     # Create indexes for faster queries

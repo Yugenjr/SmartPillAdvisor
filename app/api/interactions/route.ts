@@ -97,14 +97,25 @@ export async function POST(req: NextRequest) {
     console.log(`Total interactions found: ${interactions.length}, unique: ${uniqueInteractions.length}`);
     console.log('=== END DEBUG ===');
 
+    // Check if any drugs were actually found in the database
+    const drugsFoundInDB = drugList.some(drug => {
+      const drugName = drug.name.trim().toLowerCase();
+      return interactions.some(int =>
+        int.Drug_A?.toLowerCase().includes(drugName) ||
+        int.Drug_B?.toLowerCase().includes(drugName)
+      );
+    });
+
     return NextResponse.json({
       interactions: uniqueInteractions,
       success: true,
+      drugsFound: drugsFoundInDB,
       debug: {
         totalInDB: totalCount,
         drugsSearched: drugList.map(d => d.name),
         found: interactions.length,
-        unique: uniqueInteractions.length
+        unique: uniqueInteractions.length,
+        drugsFoundInDB
       }
     }, { status: 200 });
   } catch (e: any) {

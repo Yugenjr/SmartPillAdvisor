@@ -188,96 +188,101 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-y-auto">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 rounded-3xl p-8 text-white shadow-xl">
-        <h1 className="text-3xl font-bold mb-2">Welcome to Your Dashboard! 👋</h1>
-        <p className="text-purple-100">Manage your medications and health with ease</p>
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 rounded-3xl p-10 text-white shadow-2xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+        <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
+        <div className="relative z-10">
+          <h1 className="text-4xl font-bold mb-3">Welcome to Your Dashboard! 👋</h1>
+          <p className="text-xl text-blue-100 font-medium">Manage your medications and health with ease</p>
+        </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-4xl">💊</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="group bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border border-white/20">
+          <div className="flex items-center justify-between mb-6">
+            <div className="text-6xl group-hover:scale-110 transition-transform duration-300">💊</div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-purple-600">{stats.totalMedicines}</p>
-              <p className="text-sm text-gray-600">Total Medicines</p>
+              <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{stats.totalMedicines}</p>
+              <p className="text-sm text-gray-600 font-medium">Total Medicines</p>
             </div>
           </div>
-          <div className="h-2 bg-purple-100 rounded-full overflow-hidden">
-            <div className="h-full w-3/4 bg-gradient-to-r from-purple-500 to-blue-500"></div>
+          <div className="h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full overflow-hidden">
+            <div className="h-full w-4/5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-lg"></div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-4xl">⚡</div>
+        <div className="group bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border border-white/20">
+          <div className="flex items-center justify-between mb-6">
+            <div className="text-6xl group-hover:scale-110 transition-transform duration-300">⚡</div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-blue-600">{stats.interactionsChecked}</p>
-              <p className="text-sm text-gray-600">Interactions Checked</p>
+              <p className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.interactionsChecked}</p>
+              <p className="text-sm text-gray-600 font-medium">Interactions Checked</p>
             </div>
           </div>
-          <div className="h-2 bg-blue-100 rounded-full overflow-hidden">
-            <div className="h-full w-1/2 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
+          <div className="h-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full overflow-hidden">
+            <div className="h-full w-3/5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg"></div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-4xl">🤖</div>
+        <div className="group bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border border-white/20">
+          <div className="flex items-center justify-between mb-6">
+            <div className="text-6xl group-hover:scale-110 transition-transform duration-300">🤖</div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-pink-600">{stats.aiConsultations}</p>
-              <p className="text-sm text-gray-600">AI Consultations</p>
+              <p className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">{stats.aiConsultations}</p>
+              <p className="text-sm text-gray-600 font-medium">AI Consultations</p>
             </div>
           </div>
-          <div className="h-2 bg-pink-100 rounded-full overflow-hidden">
-            <div className="h-full w-2/3 bg-gradient-to-r from-pink-500 to-purple-500"></div>
+          <div className="h-3 bg-gradient-to-r from-pink-100 to-rose-100 rounded-full overflow-hidden">
+            <div className="h-full w-2/3 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full shadow-lg"></div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-4xl">⏰</div>
+        <div className="group bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border border-white/20">
+          <div className="flex items-center justify-between mb-6">
+            <div className="text-6xl group-hover:scale-110 transition-transform duration-300">⏰</div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-orange-600">{stats.upcomingExpiries}</p>
-              <p className="text-sm text-gray-600">Upcoming Expiries</p>
+              <p className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">{stats.upcomingExpiries}</p>
+              <p className="text-sm text-gray-600 font-medium">Upcoming Expiries</p>
             </div>
           </div>
-          <div className="h-2 bg-orange-100 rounded-full overflow-hidden">
-            <div className="h-full w-1/4 bg-gradient-to-r from-orange-500 to-red-500"></div>
+          <div className="h-3 bg-gradient-to-r from-orange-100 to-red-100 rounded-full overflow-hidden">
+            <div className="h-full w-1/3 bg-gradient-to-r from-orange-500 to-red-500 rounded-full shadow-lg"></div>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-6">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {quickActions.map((action, idx) => (
             <Link
               key={idx}
               href={action.href}
-              className="group relative overflow-hidden bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 duration-300"
+              className="group relative overflow-hidden bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border border-white/20"
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${action.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-              <div className="relative p-6">
-                <div className="text-5xl mb-4">{action.icon}</div>
-                <h3 className={`text-xl font-bold mb-2 bg-gradient-to-r ${action.gradient} bg-clip-text text-transparent`}>
+              <div className={`absolute inset-0 bg-gradient-to-br ${action.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+              <div className="relative p-8">
+                <div className="text-6xl mb-6 group-hover:scale-110 transition-transform duration-300">{action.icon}</div>
+                <h3 className={`text-2xl font-bold mb-3 bg-gradient-to-r ${action.gradient} bg-clip-text text-transparent`}>
                   {action.title}
                 </h3>
-                <p className="text-gray-600 text-sm">{action.description}</p>
+                <p className="text-gray-600 text-base font-medium">{action.description}</p>
               </div>
             </Link>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Chart */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Expiry Risk Overview</h3>
-          <div className="h-64">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl p-8 border border-white/20">
+          <h3 className="text-2xl font-bold text-gray-900 mb-6">Expiry Risk Overview</h3>
+          <div className="h-80">
             <Bar
               data={data}
               options={{
@@ -287,8 +292,15 @@ export default function DashboardPage() {
                   legend: { display: false },
                 },
                 scales: {
-                  y: { beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.05)' } },
-                  x: { grid: { display: false } }
+                  y: { 
+                    beginAtZero: true, 
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                    ticks: { font: { size: 12, weight: 'bold' } }
+                  },
+                  x: { 
+                    grid: { display: false },
+                    ticks: { font: { size: 12, weight: 'bold' } }
+                  }
                 }
               }}
             />
@@ -296,15 +308,15 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Activity</h3>
-          <div className="space-y-4">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl p-8 border border-white/20">
+          <h3 className="text-2xl font-bold text-gray-900 mb-6">Recent Activity</h3>
+          <div className="space-y-6">
             {recentActivity.map((activity, idx) => (
-              <div key={idx} className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                <div className="text-3xl">{activity.icon}</div>
+              <div key={idx} className="flex items-start gap-4 p-6 bg-gradient-to-r from-gray-50/80 to-white/80 rounded-2xl hover:from-gray-100/80 hover:to-gray-50/80 transition-all duration-300 border border-white/20">
+                <div className="text-4xl p-2 bg-white rounded-2xl shadow-lg">{activity.icon}</div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-900">{activity.text}</p>
-                  <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                  <p className="text-base font-bold text-gray-900">{activity.text}</p>
+                  <p className="text-sm text-gray-500 mt-1 font-medium">{activity.time}</p>
                 </div>
               </div>
             ))}

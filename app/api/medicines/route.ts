@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { getCalendarClient } from "@/lib/google";
+import { ObjectId } from "mongodb";
 
 export async function GET(req: NextRequest) {
   try {
@@ -88,6 +89,34 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ id: storedId, calendarEvent }, { status: 201 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    const userId = searchParams.get("userId");
+
+    if (!id || !userId) {
+      return NextResponse.json({ error: "id and userId are required" }, { status: 400 });
+    }
+
+    const { db } = await connectToDatabase();
+
+    // Delete medicine only if it belongs to the user
+    const result = await db.collection("medicines").deleteOne({
+      _id: new ObjectId(id),
+      userId: userId
+    });
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: "Medicine not found or access denied" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
