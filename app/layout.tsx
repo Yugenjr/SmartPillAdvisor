@@ -1,6 +1,7 @@
 "use client";
 import "./globals.css";
 import { AuthProvider } from "@/lib/AuthContext";
+import { ThemeProvider } from "@/lib/ThemeContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -25,10 +26,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <title>Smart Pill Advisory - Intelligent Medication Management</title>
         <meta name="description" content="Your intelligent companion for medication management, drug interactions, and medical guidance" />
       </head>
-      <body className="min-h-screen text-gray-900">
-        <AuthProvider>
-          <RootContent>{children}</RootContent>
-        </AuthProvider>
+      <body className="min-h-screen text-gray-900 dark:text-gray-100">
+        <ThemeProvider>
+          <AuthProvider>
+            <RootContent>{children}</RootContent>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -45,46 +46,77 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center p-6">
-      <div className="absolute inset-0 bg-black opacity-20"></div>
-      
-      <div className="relative max-w-md w-full">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-500/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="relative max-w-md w-full"
+      >
         {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2">💊</h1>
-          <h2 className="text-3xl font-bold text-white mb-2">Smart Pill Advisory</h2>
-          <p className="text-purple-200">Your Intelligent Medication Companion</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="text-center mb-12"
+        >
+          <div className="text-7xl mb-4">💊</div>
+          <h1 className="text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent drop-shadow-lg">
+            Smart Pill Advisor
+          </h1>
+          <p className="text-slate-300 font-medium text-lg">Your Intelligent Medication Companion</p>
+        </motion.div>
 
         {/* Auth Card */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8">
-          <div className="flex gap-2 mb-6">
-            <button
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+          className="bg-slate-800/60 backdrop-blur-xl rounded-3xl border border-cyan-500/20 shadow-2xl shadow-cyan-500/10 p-8"
+        >
+          <div className="flex gap-3 mb-8 p-1 bg-slate-700/50 rounded-2xl">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setIsLogin(true)}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
+              className={`flex-1 py-4 rounded-xl font-bold transition-all duration-300 ${
                 isLogin
-                  ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-xl border border-cyan-400/20"
+                  : "text-slate-400 hover:text-slate-200"
               }`}
             >
               Login
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setIsLogin(false)}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
+              className={`flex-1 py-4 rounded-xl font-bold transition-all duration-300 ${
                 !isLogin
-                  ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-xl border border-pink-400/20"
+                  : "text-slate-400 hover:text-slate-200"
               }`}
             >
               Sign Up
-            </button>
+            </motion.button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <label className="block text-sm font-semibold text-slate-300 mb-3">
                   Full Name
                 </label>
                 <input
@@ -93,13 +125,13 @@ export default function LoginPage() {
                   onChange={(e) => setName(e.target.value)}
                   required={!isLogin}
                   placeholder="John Doe"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-4 border-2 border-cyan-500/30 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/20 transition-all duration-300 bg-slate-700/60 backdrop-blur-sm text-slate-200 placeholder-slate-400 text-base"
                 />
-              </div>
+              </motion.div>
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-slate-300 mb-3">
                 Email Address
               </label>
               <input
@@ -108,12 +140,12 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-4 border-2 border-cyan-500/30 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/20 transition-all duration-300 bg-slate-700/60 backdrop-blur-sm text-slate-200 placeholder-slate-400 text-base"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-slate-300 mb-3">
                 Password
               </label>
               <input
@@ -122,43 +154,63 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-4 border-2 border-cyan-500/30 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/20 transition-all duration-300 bg-slate-700/60 backdrop-blur-sm text-slate-200 placeholder-slate-400 text-base"
               />
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 border-2 border-red-200 rounded-xl">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-4 bg-red-500/10 backdrop-blur-xl rounded-xl border-2 border-red-400/20"
+              >
+                <p className="text-sm text-red-300 font-medium">{error}</p>
+              </motion.div>
             )}
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-2xl hover:from-cyan-600 hover:to-blue-700 transition-all duration-300 shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed border border-cyan-400/20 text-lg"
             >
               {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Please wait...</span>
                 </div>
               ) : isLogin ? (
-                "Login to Dashboard"
+                <>🔓 Login to Dashboard</>
               ) : (
-                "Create Account"
+                <>✨ Create Account</>
               )}
-            </button>
+            </motion.button>
           </form>
 
           {/* Mock Login Button for Testing */}
           {isLogin && (
-            <div className="mt-4 space-y-2">
-              <button
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8, duration: 0.6 }}
+              className="mt-6 space-y-3"
+            >
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={async () => {
                   setLoading(true);
                   setError("");
                   try {
-                    // First try to signup with test account (this will work if auth is enabled)
+                    // Try login first (since account likely exists)
+                    const loginResult = await login("test@example.com", "test123");
+                    if (loginResult.success) {
+                      router.push("/dashboard");
+                      return;
+                    }
+
+                    // If login fails, try signup (new account)
                     const signupResult = await signup("Test User", "test@example.com", "test123");
                     if (signupResult.success) {
                       // Account created successfully, now login
@@ -169,50 +221,45 @@ export default function LoginPage() {
                         setError(result.error || "Login failed after account creation");
                       }
                     } else {
-                      // Signup failed, try login (account might already exist)
-                      const result = await login("test@example.com", "test123");
-                      if (result.success) {
-                        router.push("/dashboard");
-                      } else {
-                        // Check if it's a configuration issue
-                        if (result.error?.includes('invalid-credential') || result.error?.includes('configuration')) {
-                          setError("Firebase Authentication not properly configured. Please enable Email/Password sign-in in Firebase Console → Authentication → Sign-in method");
-                        } else {
-                          setError(result.error || "Mock login failed");
-                        }
-                      }
+                      setError(signupResult.error || "Failed to create demo account");
                     }
-                  } catch (err) {
-                    setError("An error occurred during mock login. Check Firebase configuration.");
+                  } catch (err: any) {
+                    console.error("Demo login error:", err);
+                    setError("Demo login failed. Check your internet connection and Firebase setup.");
                   } finally {
                     setLoading(false);
                   }
                 }}
                 disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-2xl hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed border border-emerald-400/20"
               >
                 🚀 Quick Test Login (Demo Account)
-              </button>
+              </motion.button>
 
-              <p className="text-xs text-gray-500 text-center mt-2">
+              <p className="text-xs text-slate-400 text-center">
                 Creates a demo account for testing the app
               </p>
-            </div>
+            </motion.div>
           )}
 
           {isLogin && (
-            <div className="mt-4 text-center">
-              <a href="#" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+            <div className="mt-6 text-center">
+              <a href="#" className="text-sm text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
                 Forgot password?
               </a>
             </div>
           )}
-        </div>
+        </motion.div>
 
-        <p className="text-center text-purple-200 text-sm mt-6">
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.0, duration: 0.6 }}
+          className="text-center text-slate-400 text-sm mt-8"
+        >
           By continuing, you agree to our Terms of Service and Privacy Policy
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
     </div>
   );
 }
