@@ -154,6 +154,9 @@ export default function ChatPage() {
 
     // For assistant messages, apply rich formatting
     if (role === "assistant") {
+      // Wrap everything in a div with default dark text color
+      formatted = `<div class="text-gray-800">${formatted}</div>`;
+      
       // Code blocks with syntax highlighting style
       formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
         return `<pre class="bg-gray-100 rounded-lg p-3 my-2 overflow-x-auto border border-gray-300"><code class="text-xs font-mono text-gray-800">${code.trim()}</code></pre>`;
@@ -197,11 +200,15 @@ export default function ChatPage() {
       formatted = formatted.replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold mt-3 mb-2 text-gray-900">$1</h1>');
 
       // Paragraphs (double line breaks)
-      formatted = formatted.replace(/\n\n/g, '</p><p class="mb-2">');
-      formatted = `<p class="mb-2">${formatted}</p>`;
+      formatted = formatted.replace(/\n\n/g, '</p><p class="mb-2 text-gray-800">');
+      formatted = `<p class="mb-2 text-gray-800">${formatted}</p>`;
 
       // Single line breaks
       formatted = formatted.replace(/\n/g, '<br/>');
+      
+      // Close the wrapper div
+      formatted = formatted.replace(/<\/div>$/, '');
+      formatted += '</div>';
     } else {
       // For user messages, simple formatting
       formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold">$1</strong>');

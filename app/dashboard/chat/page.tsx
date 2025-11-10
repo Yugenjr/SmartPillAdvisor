@@ -14,7 +14,6 @@ export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // New features state
@@ -22,6 +21,7 @@ export default function ChatPage() {
   const [renameInput, setRenameInput] = useState("");
   const [isTTSEnabled, setIsTTSEnabled] = useState(false);
   const [speakingMessage, setSpeakingMessage] = useState<string | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
 
   // Load chat sessions from MongoDB
   useEffect(() => {
@@ -117,7 +117,6 @@ export default function ChatPage() {
   const loadSession = (session: ChatSession) => {
     setCurrentSessionId(session.sessionId);
     setMessages(session.messages || []);
-    setSidebarOpen(false);
   };
 
   const send = async () => {
@@ -235,7 +234,7 @@ export default function ChatPage() {
       // Configure voice settings
       utterance.rate = 0.9;
       utterance.pitch = 1;
-      utterance.volume = 0.8;
+      utterance.volume = isMuted ? 0 : 0.8;
 
       // Try to find a female voice
       const voices = window.speechSynthesis.getVoices();
@@ -390,19 +389,21 @@ export default function ChatPage() {
         // Tables (markdown format)
         formatted = formatted.replace(/\n\|(.+)\|\n\|[-:\s|]+\|\n((?:\|.+\|\n?)+)/g, (match, header, rows) => {
           try {
-            const headers = header.split('|').filter((h: string) => h.trim()).map((h: string) => `<th class="border border-cyan-500/20 px-3 py-2 bg-slate-700 font-semibold text-left text-slate-200">${h.trim()}</th>`).join('');
+            const headers = header.split('|').filter((h: string) => h.trim()).map((h: string) => `<th class="border border-white/30 px-3 py-2 bg-slate-700/80 font-semibold text-left text-slate-200">${h.trim()}</th>`).join('');
             const rowsHtml = rows.trim().split('\n').map((row: string) => {
-              const cells = row.split('|').filter((c: string) => c.trim()).map((c: string) => `<td class="border border-cyan-500/20 px-3 py-2 text-slate-200">${c.trim()}</td>`).join('');
+              const cells = row.split('|').filter((c: string) => c.trim()).map((c: string) => `<td class="border border-white/30 px-3 py-2 bg-slate-700/80 text-slate-200">${c.trim()}</td>`).join('');
               return `<tr>${cells}</tr>`;
             }).join('');
-            return `<div class="overflow-x-auto my-3"><table class="min-w-full border-collapse border border-cyan-500/20 text-sm"><thead><tr>${headers}</tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+            return `<div class="overflow-x-auto my-3"><table class="min-w-full border-collapse border border-white/30 text-sm bg-slate-700/80"><thead><tr>${headers}</tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
           } catch (e) {
-            return `<pre class="bg-slate-800 p-3 rounded text-slate-200">${match}</pre>`;
+            return `<pre class="bg-slate-800 p-3 rounded text-slate-200 border border-white/30">${match}</pre>`;
           }
         });
 
         // Headers
         formatted = formatted.replace(/^### (.+)$/gm, '<h3 class="text-base font-bold mt-3 mb-2 text-slate-100">$1</h3>');
+        formatted = formatted.replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold mt-3 mb-2 text-slate-100">$1</h2>');
+        formatted = formatted.replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold mt-3 mb-2 text-slate-100">$1</h1>');
         formatted = formatted.replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold mt-3 mb-2 text-slate-100">$1</h2>');
         formatted = formatted.replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold mt-3 mb-2 text-slate-100">$1</h1>');
 
@@ -440,9 +441,9 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex">
-      {/* Main Chat Area - Full Width */}
-      <div className="w-full flex flex-col">
+    <div className="h-full flex">
+      {/* Left Side - Chat Messages Area */}
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Header */}
         <div className="h-16 bg-slate-800/90 backdrop-blur-xl border-b border-slate-700/50 flex items-center justify-between px-8">
           <div className="flex items-center gap-4">
@@ -480,19 +481,34 @@ export default function ChatPage() {
               </button>
             </div>
 
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-3 bg-slate-700/60 hover:bg-slate-600/60 rounded-xl transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl border border-slate-600/50"
-            >
-              <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </button>
+            {isTTSEnabled && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsMuted(!isMuted)}
+                className={`p-3 rounded-xl transition-all duration-300 shadow-lg border ${
+                  isMuted
+                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-400/20'
+                    : 'bg-slate-700/60 hover:bg-slate-600/60 text-cyan-400 border-slate-600/50'
+                }`}
+                title={isMuted ? "Unmute voice" : "Mute voice"}
+              >
+                {isMuted ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 5.586L19.414 19.414M9.172 9.172L12 12m-2.828 2.828L9.172 14.828m5.656-5.656L14.828 9.172M12 2.25a.75.75 0 00-.75.75v1.5a.75.75 0 01-.75.75 4.5 4.5 0 00-4.5 4.5v.75a.75.75 0 01-.75.75H2.25a.75.75 0 100 1.5H4.5a.75.75 0 00.75-.75v-.75a6 6 0 016-6 .75.75 0 00.75-.75V3a.75.75 0 00-.75-.75z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.114 5.636l-3.51 3.51M12 2.25a.75.75 0 00-.75.75v1.5a.75.75 0 01-.75.75 4.5 4.5 0 00-4.5 4.5v.75a.75.75 0 01-.75.75H2.25a.75.75 0 100 1.5H4.5a.75.75 0 00.75-.75v-.75a6 6 0 016-6 .75.75 0 00.75-.75V3a.75.75 0 00-.75-.75z" />
+                  </svg>
+                )}
+              </motion.button>
+            )}
           </div>
         </div>
 
-        {/* Chat Messages Area - Minimized Height */}
-        <div className="overflow-y-auto p-4 min-h-[35vh] max-h-[45vh]">
+        {/* Chat Messages Area */}
+        <div className="flex-1 overflow-y-auto p-4">
           <div className="w-full max-w-none">
             {messages.length === 0 && (
               <motion.div
@@ -590,7 +606,7 @@ export default function ChatPage() {
                       <div
                         className={`text-base leading-relaxed ${
                           m.role === "user" ? "text-white" : "text-slate-100"
-                        } formatted-content prose prose-invert max-w-none`}
+                        } formatted-content prose prose-invert max-w-none max-h-96 overflow-y-auto`}
                         dangerouslySetInnerHTML={{
                           __html: formatMessage(m.content || '', m.role),
                         }}
@@ -625,8 +641,8 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Input Area - Right Below */}
-        <div className="p-4">
+        {/* Input Area - Bottom */}
+        <div className="bg-slate-800/90 backdrop-blur-xl border-t border-slate-700/50 p-4">
           <div className="w-full">
             <div className="flex gap-4 items-end">
               {messages.length > 0 && (
@@ -691,40 +707,13 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Right Sidebar - Chat History */}
-      <motion.div
-        initial={false}
-        animate={{
-          width: sidebarOpen ? 350 : 0,
-          opacity: sidebarOpen ? 1 : 0
-        }}
-        transition={{ duration: 0.3 }}
-        className="bg-slate-800/95 backdrop-blur-xl border-l border-slate-700/50 overflow-hidden flex flex-col"
-      >
+      {/* Right Side - Chat History */}
+      <div className="w-80 bg-slate-800/95 backdrop-blur-xl border-l border-slate-700/50 flex flex-col">
         {/* Sidebar Header */}
         <div className="p-6 border-b border-slate-700/50">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-lg text-slate-200">Chat History</h3>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-2 hover:bg-slate-700/60 rounded-lg transition-colors"
-            >
-              <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
-        </div>
-
-        {/* New Chat Button */}
-        <div className="p-6 border-b border-slate-700/50">
-          <button
-            onClick={() => createNewSession()}
-            className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-2xl hover:from-cyan-600 hover:to-blue-700 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center justify-center gap-3 border border-cyan-400/20"
-          >
-            <span className="text-xl">+</span>
-            <span>New Chat</span>
-          </button>
         </div>
 
         {/* Search */}
@@ -741,6 +730,17 @@ export default function ChatPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
+        </div>
+
+        {/* New Chat Button */}
+        <div className="p-6 border-b border-slate-700/50">
+          <button
+            onClick={() => createNewSession()}
+            className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-2xl hover:from-cyan-600 hover:to-blue-700 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center justify-center gap-3 border border-cyan-400/20"
+          >
+            <span className="text-xl">+</span>
+            <span>New Chat</span>
+          </button>
         </div>
 
         {/* Sessions List */}
@@ -841,7 +841,7 @@ export default function ChatPage() {
             </div>
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }
