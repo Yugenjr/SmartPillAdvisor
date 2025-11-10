@@ -215,56 +215,103 @@ export default function ChatPage() {
 
   // TTS Functions
   const speakMessage = (messageId: string, text: string) => {
+    // Validate input
     if (!text || text.trim() === '') {
       console.warn('Cannot speak empty message');
       return;
     }
 
-    // Stop any currently speaking
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    } else {
-      console.warn('Speech synthesis not supported');
+    // Check text length (limit to reasonable size to prevent timeouts)
+    let cleanText = text.trim();
+    if (cleanText.length > 5000) {
+      console.warn('Text too long for speech synthesis, truncating');
+      cleanText = cleanText.substring(0, 5000) + '...';
+    }
+
+    // Check if speech synthesis is supported
+    if (!('speechSynthesis' in window)) {
+      console.warn('Speech synthesis not supported in this browser');
+      // Could show a user notification here if needed
+      return;
+    }
+
+    // Check if already speaking
+    if (window.speechSynthesis.speaking) {
+      console.warn('Speech synthesis already in progress');
+      return;
+    }
+
+    // Check if TTS is enabled
+    if (!isTTSEnabled) {
+      console.warn('TTS is disabled');
       return;
     }
 
     try {
-      const utterance = new SpeechSynthesisUtterance(text);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
 
-      // Configure voice settings
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      utterance.volume = isMuted ? 0 : 0.8;
+      // Configure voice settings with error handling
+      utterance.rate = Math.max(0.1, Math.min(10, 0.9)); // Clamp rate between 0.1-10
+      utterance.pitch = Math.max(0, Math.min(2, 1)); // Clamp pitch between 0-2
+      utterance.volume = isMuted ? 0 : Math.max(0, Math.min(1, 0.8)); // Clamp volume between 0-1
 
-      // Try to find a female voice
+      // Try to find a suitable voice
       const voices = window.speechSynthesis.getVoices();
-      const femaleVoice = voices.find(voice =>
-        voice.name.toLowerCase().includes('female') ||
-        voice.name.toLowerCase().includes('karen') ||
-        voice.name.toLowerCase().includes('samantha') ||
-        voice.name.toLowerCase().includes('zira')
-      );
-      if (femaleVoice) {
-        utterance.voice = femaleVoice;
+      if (voices.length > 0) {
+        // Try to find English voices first, then fallback to any available voice
+        const englishVoice = voices.find(voice =>
+          voice.lang.startsWith('en') &&
+          (voice.name.toLowerCase().includes('female') ||
+           voice.name.toLowerCase().includes('male'))
+        ) || voices.find(voice => voice.lang.startsWith('en')) || voices[0];
+
+        if (englishVoice) {
+          utterance.voice = englishVoice;
+          console.log('Using voice:', englishVoice.name, englishVoice.lang);
+        }
       }
 
+      // Set up event handlers
       utterance.onstart = () => {
         setSpeakingMessage(messageId);
         console.log('Started speaking message:', messageId);
       };
 
+      // Set a timeout to prevent hanging
+      const timeoutId = setTimeout(() => {
+        console.warn('Speech synthesis timeout, cancelling');
+        window.speechSynthesis.cancel();
+        setSpeakingMessage(null);
+      }, 30000); // 30 second timeout
+
       utterance.onend = () => {
+        clearTimeout(timeoutId);
         setSpeakingMessage(null);
         console.log('Finished speaking message:', messageId);
       };
 
       utterance.onerror = (event) => {
-        console.error('Speech synthesis error:', event);
+        clearTimeout(timeoutId);
+        console.error('Speech synthesis error:', {
+          error: event.error,
+          message: event.message || 'Unknown error',
+          charIndex: event.charIndex,
+          elapsedTime: event.elapsedTime
+        });
         setSpeakingMessage(null);
-        // Don't show alert to user, just log the error
       };
 
+      utterance.onpause = () => {
+        console.log('Speech paused');
+      };
+
+      utterance.onresume = () => {
+        console.log('Speech resumed');
+      };
+
+      // Speak the utterance
       window.speechSynthesis.speak(utterance);
+
     } catch (error) {
       console.error('TTS setup error:', error);
       setSpeakingMessage(null);
