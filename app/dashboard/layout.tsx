@@ -37,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { icon: "💊", label: "Interactions", href: "/dashboard/interactions", color: "blue" },
     { icon: "📱", label: "Scanner", href: "/dashboard/scan", color: "emerald" },
     { icon: "📋", label: "Track Records", href: "/dashboard/records", color: "indigo" },
+    { icon: "🔮", label: "Price Predictions", href: "/dashboard/predictions", color: "amber" },
     { icon: "⚙️", label: "Settings", href: "/dashboard/settings", color: "gray" },
   ];
 

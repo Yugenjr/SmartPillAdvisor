@@ -24,7 +24,8 @@ export function getAdminApp() {
         credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
       });
       return app;
-    } catch (error: any) {
+    } catch (// eslint-disable-next-line @typescript-eslint/no-explicit-any
+error: any) {
       if (error.code === 'app/duplicate-app') {
         app = admin.app();
         return app;

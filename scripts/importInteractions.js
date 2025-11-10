@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Script to import drug interactions from CSV files to Firestore
 const admin = require('firebase-admin');
 const fs = require('fs');

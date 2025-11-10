@@ -9,25 +9,30 @@ let cachedDb: Db | null = null;
 export async function connectToDatabase() {
   // In-memory safe fallback if env not provided yet
   if (!uri || !dbName) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const memory: Record<string, any[]> = { medicines: [], interactions: [] };
     return {
       client: null as unknown as MongoClient,
       db: {
         collection(name: string) {
           return {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             find(query: any) {
               const data = memory[name] || [];
-              const res = data.filter((doc: any) =>
+              const res = data.filter(// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(doc: any) =>
                 Object.keys(query || {}).every((k) => doc[k] === query[k])
               );
               return { toArray: async () => res };
             },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             insertOne(doc: any) {
               if (!memory[name]) memory[name] = [];
               const id = `${name}_${Date.now()}`;
               memory[name].push({ _id: id, ...doc });
               return Promise.resolve({ insertedId: id });
             },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any;
         },
       } as unknown as Db,

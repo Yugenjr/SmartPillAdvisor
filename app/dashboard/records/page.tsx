@@ -33,10 +33,16 @@ interface Medicine {
   name: string;
   company?: string;
   dosage?: string;
+  price?: number;
+  frequency?: string;
+  duration?: number;
+  condition?: string;
+  severity?: string;
   expiryDate: string;
   purchaseDate?: string;
   code?: string;
   userId: string;
+  createdAt: Date;
 }
 
 export default function RecordsPage() {
@@ -153,26 +159,55 @@ export default function RecordsPage() {
     }
   };
 
-  // Load sample data for testing
+  const cleanDuplicates = async () => {
+    if (!confirm("Are you sure you want to remove duplicate entries for Paracetamol and Ibuprofen?")) return;
+
+    try {
+      const response = await fetch("/api/medicines/clean-duplicates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          medicineNames: ["Paracetamol", "Ibuprofen"]
+        })
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        alert(result.message);
+        fetchMedicines(); // Refresh the list
+      } else {
+        throw new Error(result.error || "Failed to remove duplicates");
+      }
+    } catch (error) {
+      console.error("Error removing duplicates:", error);
+      alert("Error removing duplicates: " + (error as Error).message);
+    }
+  };
+
   const loadSampleData = async () => {
-    if (!user) return;
+    if (!user || !confirm("Are you sure you want to load 8 sample medicines? This will add them to your database.")) return;
 
     setFormLoading(true);
     try {
       const response = await fetch("/api/sample-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.uid })
+        body: JSON.stringify({
+          userId: user.uid
+        })
       });
 
       if (response.ok) {
+        const result = await response.json();
+        alert(result.message || `Successfully added ${result.insertedCount} sample medicines!`);
         fetchMedicines(); // Refresh the list
-        alert("Sample data loaded successfully! You now have 8 medicines to explore the analytics.");
       } else {
-        console.error("Failed to load sample data");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to load sample data");
       }
     } catch (error) {
       console.error("Error loading sample data:", error);
+      alert("Error loading sample data: " + (error as Error).message);
     } finally {
       setFormLoading(false);
     }
@@ -732,6 +767,16 @@ export default function RecordsPage() {
               className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-2xl hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 shadow-xl hover:shadow-2xl border border-emerald-400/20"
             >
               {showAddForm ? "✕ Cancel" : "➕ Add Medicine Manually"}
+            </motion.button>
+
+            {/* Clean Duplicates Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={cleanDuplicates}
+              className="px-8 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-2xl hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 shadow-xl hover:shadow-2xl border border-purple-400/20"
+            >
+              🧹 Clean Duplicates
             </motion.button>
           </motion.div>
 

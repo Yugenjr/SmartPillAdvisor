@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { MongoClient } = require('mongodb');
 const fs = require('fs');
 const path = require('path');
