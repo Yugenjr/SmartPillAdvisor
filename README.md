@@ -178,7 +178,7 @@ Add all `.env.local` variables to your deployment platform
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Open Pull Request
 
-Refer to the [CONTRIBUTION](CONTRIBUTION.md) file for better clarity.
+Refer to the [CONTRIBUTION](CONTRIBUTION.MD) file for better clarity.
 
 ## 📄 License
 
