@@ -188,6 +188,14 @@ export default function DashboardPage() {
       gradient: "from-indigo-500 to-purple-600",
       glowColor: "indigo"
     },
+    {
+      icon: "⏰",
+      title: "Schedule Optimizer",
+      description: "AI-powered medication timing",
+      href: "/dashboard/schedule",
+      gradient: "from-teal-500 to-cyan-600",
+      glowColor: "teal"
+    },
   ];
 
   if (loading) {
@@ -470,10 +478,9 @@ export default function DashboardPage() {
                       <p className="text-sm font-bold text-slate-200">{activity.text}</p>
                       <p className="text-xs text-slate-400 mt-1">{activity.time}</p>
                     </div>
-                    <div className={`w-3 h-3 rounded-full ${
-                      activity.type === 'success' ? 'bg-green-500 shadow-lg shadow-green-500/50' :
-                      activity.type === 'warning' ? 'bg-yellow-500 shadow-lg shadow-yellow-500/50' : 'bg-blue-500 shadow-lg shadow-blue-500/50'
-                    } animate-pulse`}></div>
+                    <div className={`w-3 h-3 rounded-full ${activity.type === 'success' ? 'bg-green-500 shadow-lg shadow-green-500/50' :
+                        activity.type === 'warning' ? 'bg-yellow-500 shadow-lg shadow-yellow-500/50' : 'bg-blue-500 shadow-lg shadow-blue-500/50'
+                      } animate-pulse`}></div>
                   </motion.div>
                 )) : (
                   <motion.div

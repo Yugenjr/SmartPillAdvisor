@@ -37,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { icon: "💊", label: "Interactions", href: "/dashboard/interactions", color: "blue" },
     { icon: "📱", label: "Scanner", href: "/dashboard/scan", color: "emerald" },
     { icon: "📋", label: "Track Records", href: "/dashboard/records", color: "indigo" },
+    { icon: "⏰", label: "Schedule Optimizer", href: "/dashboard/schedule", color: "teal" },
     { icon: "🔮", label: "Price Predictions", href: "/dashboard/predictions", color: "amber" },
     { icon: "⚙️", label: "Settings", href: "/dashboard/settings", color: "gray" },
   ];
@@ -56,9 +57,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-slate-900/95 backdrop-blur-xl border-r border-cyan-500/20 z-50 transition-all duration-500 ease-in-out ${
-          sidebarOpen ? "w-72 lg:w-72 md:w-64 shadow-2xl" : "w-20 shadow-lg"
-        }`}
+        className={`fixed top-0 left-0 h-full bg-slate-900/95 backdrop-blur-xl border-r border-cyan-500/20 z-50 transition-all duration-500 ease-in-out ${sidebarOpen ? "w-72 lg:w-72 md:w-64 shadow-2xl" : "w-20 shadow-lg"
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -86,11 +86,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`group flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 ${
-                    isActive
+                  className={`group flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 ${isActive
                       ? `bg-gradient-to-r ${item.color}-500/20 to-${item.color}-600/20 text-white shadow-xl scale-105 border border-${item.color}-500/30`
                       : "hover:bg-slate-800/60 text-slate-300 hover:shadow-lg border border-transparent hover:border-cyan-500/20"
-                  }`}
+                    }`}
                   aria-label={`${item.label} ${isActive ? '(current page)' : ''}`}
                 >
                   <span className="text-3xl group-hover:scale-110 transition-transform duration-200" aria-hidden="true">{item.icon}</span>
@@ -120,9 +119,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <button
               onClick={handleLogout}
-              className={`w-full py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl shadow-red-500/25 flex items-center ${
-                sidebarOpen ? "justify-center gap-3" : "justify-center"
-              } focus:outline-none focus:ring-4 focus:ring-red-500/20 border border-red-500/20 hover:border-red-500/40`}
+              className={`w-full py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl shadow-red-500/25 flex items-center ${sidebarOpen ? "justify-center gap-3" : "justify-center"
+                } focus:outline-none focus:ring-4 focus:ring-red-500/20 border border-red-500/20 hover:border-red-500/40`}
               aria-label="Logout"
             >
               <span className="text-lg" aria-hidden="true">🚪</span>
@@ -143,9 +141,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <div
-        className={`flex flex-col transition-all duration-500 ease-in-out ${
-          sidebarOpen ? "ml-72 lg:ml-72 md:ml-64" : "ml-20"
-        }`}
+        className={`flex flex-col transition-all duration-500 ease-in-out ${sidebarOpen ? "ml-72 lg:ml-72 md:ml-64" : "ml-20"
+          }`}
       >
         {/* Top Bar */}
         <header className="bg-slate-900/80 backdrop-blur-xl shadow-2xl sticky top-0 z-40 border-b border-cyan-500/20">
