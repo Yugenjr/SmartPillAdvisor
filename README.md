@@ -105,23 +105,23 @@ Open [http://localhost:3000](http://localhost:3000)
 ## 📁 Project Structure
 
 ```
-smartpillapp/
-├── app/
-│   ├── api/              # API routes
-│   │   ├── chat/         # AI chatbot endpoint
-│   │   ├── interactions/ # Drug interaction checker
-│   │   └── medicines/    # Medicine scanner
-│   ├── chat/             # Chat page
-│   ├── interactions/     # Interactions page
-│   ├── scan/             # Scanner page
-│   ├── layout.tsx        # Root layout
-│   └── page.tsx          # Dashboard
-├── lib/
-│   ├── firebaseAdmin.ts  # Firebase admin config
-│   └── mongodb.ts        # MongoDB connection
-├── ddinterpy/            # Drug interaction CSV files
-├── scripts/              # Import scripts
-└── public/               # Static assets
+📁 smartpillapp/
+├──📁 app/
+│   ├──📁 api/              # API routes
+│   │   ├──📁 chat/         # AI chatbot endpoint
+│   │   ├──📁 interactions/ # Drug interaction checker
+│   │   └──📁 medicines/    # Medicine scanner
+│   ├──📁 chat/             # Chat page
+│   ├──📁 interactions/     # Interactions page
+│   ├──📁 scan/             # Scanner page
+│   ├──📁 layout.tsx        # Root layout
+│   └──📁 page.tsx          # Dashboard
+├──📁 lib/
+│   ├──📁 firebaseAdmin.ts  # Firebase admin config
+│   └──📁 mongodb.ts        # MongoDB connection
+├──📁 ddinterpy/            # Drug interaction CSV files
+├──📁 scripts/              # Import scripts
+└──📁 public/               # Static assets
 ```
 
 ## 🎨 Design Features
@@ -178,9 +178,11 @@ Add all `.env.local` variables to your deployment platform
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Open Pull Request
 
+Refer to the [CONTRIBUTION](CONTRIBUTION.MD) file for better clarity.
+
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. Check the [LICENSE](LICENSE) file.
 
 ## 👥 Authors
 
